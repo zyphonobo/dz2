@@ -1,0 +1,46 @@
+# Стек домашнего задания № 2. Вариант 03, Никитенко Е. В.
+# Тег образа не пишется: его подставляет deploy.sh через переменную VERSION.
+services:
+  web:
+    image: localhost:6003/nikitenko-03/probe:${VERSION}
+    environment:
+      MARKER: boxlab
+      APP_PORT: "5003"
+      DATABASE_URL: postgresql://postgres:lab@db:5432/lab
+    ports:
+      - "8009:5003"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5003/notes')"]
+      interval: 3s
+      retries: 3
+    networks: [net]
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 5s
+        order: start-first
+        failure_action: rollback
+        monitor: 20s
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: lab
+      POSTGRES_DB: lab
+    volumes:
+      - data:/var/lib/postgresql/data
+    networks: [net]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "localhost", "-U", "postgres"]
+      interval: 2s
+      retries: 30
+
+networks:
+  net:
+    ipam:
+      config:
+        - subnet: 10.23.0.0/24
+
+volumes:
+  data:
